@@ -74,7 +74,13 @@ def plot_violin_clim_halves(to_plot,ax,x):
     return ax
 
 def plot_doy_polar(nl,heat, capac,nl_qu,extremes,ax_doy,ax_cum,ax_dur):
-    ymax=0
+    #fig configs
+    pco.set_grid(ax_doy)
+    theta = np.linspace(0.0, 2 * np.pi, 12, endpoint=False)
+    bar_width = 2 * np.pi / 12  # width of each month's slice    
+    # Set North to top, and progress clockwise
+    ax_doy.set_theta_zero_location('N')
+    ax_doy.set_theta_direction(-1)
     for x,climate in enumerate(['historical','SSP370']):
         # get current set of top events
         nl_one_scen = nl.sel(heating_scenario=heat,capacity_scenario=capac,climate=climate)/1000
@@ -83,39 +89,40 @@ def plot_doy_polar(nl,heat, capac,nl_qu,extremes,ax_doy,ax_cum,ax_dur):
         dur = extreme_here.sel(typ = "dur")
         cum = extreme_here.sel(typ="cum")
         cum = cum.sortby(cum,ascending=False)
-        doy = cum.time.dt.dayofyear.values
-        print_top_months(doy,climate)
-        theta = 2 * np.pi * (doy - 1) / 365
+        print_top_months(cum,climate)
+        month_vals=cum.groupby("time.month").count().reindex(month=np.arange(1, 13), fill_value=0)
+        ax_doy.bar(
+            theta, 
+            month_vals, 
+            width=bar_width, 
+            zorder=4,
+            color=pco.colors[1-x],
+            alpha=0.5,
+            label=ut.scen_config_dict[climate],
+            #edgecolor="dimgrey",
+        )
+        ymax = month_vals.max()
         for j,cum_ext in enumerate(cum[0:5]):
             #plot top five events in terms of maximum net load and duration
             nl_ext = exa.find_peak(nl_one_scen,cum_ext.member,cum_ext.time,dur.sel(time=cum_ext.time))
             for a in [ax_cum,ax_dur]:
                 lm = a.get_xlim()
                 a.plot((-1+x*2+random.uniform(-0.9, 0.9))*(lm[1]-lm[0])*0.015,cum.sel(time=cum_ext.time),"o",markersize=3.5,zorder=4,color=pco.colors[1-x],mec="k",mew=0.7)
-        # plotting seasonality
-        vals=ax_doy.hist(theta, bins=48,density=True,zorder=4,color=pco.colors[1-x],alpha=0.5,label=ut.scen_config_dict[climate])  # 24 bins ≈ half-month resolution
-        for th in theta[0:5]:
-            ax_doy.plot(th,vals[0].max(),"o",markersize=3.5,zorder=4,color=pco.colors[1-x],mec="k",mew=0.7)
-        ymax = max(ymax,vals[0].max())
-    # Fig config 
-    ax_doy.set_theta_zero_location("N")   # Jan at top
-    ax_doy.set_theta_direction(-1)        # clockwise (calendar style)
-    # Day of year at start of each month
-    month_starts = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335]
-    month_mids   = [16, 46, 75, 106, 136, 167, 197, 228, 259, 289, 320, 350]
-    month_letters = ['J','F','M','A','M','J','J','A','S','O','N','D']
-    # Convert to radians
-    ticks_rad = [d / 365 * 2 * np.pi for d in month_starts]
-    mids_rad  = [d / 365 * 2 * np.pi for d in month_mids]
-    # Ticks at month starts, labels at month midpoints
-    ax_doy.set_xticks(ticks_rad)
-    ax_doy.set_xticklabels([])  # no labels on ticks
-    # Add month letter labels at midpoints
-    for angle, letter in zip(mids_rad, month_letters):
-        ax_doy.text(angle, ymax*1.2, letter,
-                ha='center', va='center', fontsize=10)
-    ax_doy.set_yticklabels([])
-    pco.set_grid(ax_doy)
+            ax_doy.plot(((cum.sel(time=cum_ext.time).time.dt.dayofyear - 1) / 365) * (2 * np.pi),150,"o",markersize=3.5,zorder=4,color=pco.colors[1-x],mec="k",mew=0.7)
+    # format the axes
+    month_labels = ['J','F','M','A','M','J','J','A','S','O','N','D']
+    ax_doy.set_xticks(theta)
+    ax_doy.set_xticklabels(month_labels)
+    for txt in fig.axes[1].get_yticklabels()[:-1]:
+        to_plot = txt.get_position()[1]
+        ax_doy.text(bar_width*3, to_plot, f"{int(to_plot)}", 
+            fontsize=6, 
+            color='black', 
+            ha='center',   # Horizontal alignment
+            va='center',
+            rotation=-90)
+    ax_doy.set_yticklabels([])    
+    ax_doy.tick_params(axis='x', pad=0)  
     return ax_doy, ax_cum,ax_dur
 
 def get_atm_plots_top5(heat,capac,climate):
@@ -171,17 +178,11 @@ def plot_weather_maps(ax,ds_to_plot,cmap,vmin,vmax,zmin,zmax,var='temperature'):
     ax.coastlines(linewidth=0.1)
     return f,ax
 
-def print_top_months(doy,climate):
-    # Convert DOY to Month name (assuming a standard 2023 non-leap year)
-    df = pd.DataFrame({'DOY': doy})
-    df['Date'] = pd.to_datetime(df['DOY'], format='%j')
-    df['Month'] = df['Date'].dt.month_name()
-    
-    
-    # --- Top Months containing 90% of Data ---
-    counts = df['Month'].value_counts()
-    cum_pct = counts.cumsum() / len(df)
-    top_90_months = cum_pct[cum_pct.shift(1, fill_value=0) < 0.9].index.tolist()
+def print_top_months(cum,climate):
+    ds = cum.groupby("time.month").count().reindex(month=np.arange(1, 13), fill_value=0).to_series()
+    ds = ds.sort_values(ascending=False)
+    cum_pct = ds.cumsum() / ds.sum()
+    top_90_months=cum_pct[cum_pct.shift(1, fill_value=0) < 0.9].index.tolist()
     
     print(f"Top months holding 90% of data in {climate}: {top_90_months}")
 # ===============================
@@ -253,7 +254,7 @@ for i,a in enumerate(axes):
         a.text(0.01,0.97,string.ascii_lowercase[i],weight="bold",transform=a.transAxes)
     else:
         a.text(0.01,0.92,string.ascii_lowercase[i],weight="bold",transform=a.transAxes)
-
+fig.axes[1].sharey(fig.axes[4])
 #legend for first two columns
 handles, labels = ax_doy.get_legend_handles_labels() 
 fig.legend(handles, labels, loc='lower left',ncol=2,frameon=False,bbox_to_anchor=(0.04, -0.073),)
@@ -298,7 +299,7 @@ f.colorbar(
 f.savefig(f"../../figs_storyline_extremes/wind_maps_WCED.png",bbox_inches="tight",dpi=1200,transparent=True)
 print("appendix figure 7 saved")
 
-## =============================
+# =============================
 # === Appendix figures 2-3,6 ===
 # ==============================
 
@@ -306,7 +307,9 @@ print("plotting appendix figures 2-3+6")
 f_cum,ax_cum = plt.subplots(2,4,figsize=(7.2,4),sharey=True) #plot cumulative threshold exceedance for all scenarios 
 f_dur,ax_dur = plt.subplots(2,4,figsize=(7.2,4),sharey=True) #plot duration for all scenarios 
 
-f_doy,ax_doy = plt.subplots(2,4,figsize=(7.2,4),subplot_kw={"projection":"polar"}) # plot seasonality (day of year of event end) for all scenarios
+f_doy,ax_doy = plt.subplots(2,4,figsize=(7.2,4),subplot_kw={"projection":"polar"},sharey=True) # plot seasonality (day of year of event end) for all scenarios
+
+
 
 # iterate over all scenarios
 for i,heat in enumerate(heating_scenarios):
@@ -322,7 +325,7 @@ for i,heat in enumerate(heating_scenarios):
         ax_dur[i][j] = plot_violin_clim_halves(dur_plot,ax_dur[i][j],0)     
         
 #fig config
-for i, a in enumerate([ax_cum,ax_doy,ax_dur]):
+for i, a in enumerate([ax_cum,ax_dur,ax_doy]):
     for n,ax in enumerate(a.flatten()):
         if i < 2: #only for intensity and duration plot
             ax.set_xticks([])
