@@ -197,9 +197,9 @@ def open_demand_profiles():
     dss = []
     for file in files:
         dss.append(read_plan4res_excel(file))
-    dss = xr.concat(dss,dim= pd.Index(names, name="demand_type"))
+    dss = xr.concat(dss,dim= pd.Index(np.array(names, dtype=object), name="demand_type", dtype=object))
     # add a flat profile for demand values that do not change over the year
-    flat = xr.DataArray(data=np.ones((len(dss[0]),1)),dims=["time","demand_type"],coords={"time":dss.time,"demand_type":["flat"]})
+    flat = xr.DataArray(data=np.ones((len(dss[0]),1)),dims=["time","demand_type"],coords={"time":dss.time,"demand_type":np.array(["flat"], dtype=object)})
     dss = xr.concat([dss,flat],dim="demand_type")
     # normalize so that values sum up to 1 over a year
     dss_norm = dss/dss.sum("time")

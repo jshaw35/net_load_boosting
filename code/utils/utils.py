@@ -170,10 +170,14 @@ def country_name_to_country_code(keys):
         return country_codes[keys]
 
 shapefile_path = "/home/lbloin/Thesis/eng_boost/net_load_boosting/inputs/geopandas/ne_50m_admin_0_countries.shp"
-# Load the shapefile
-world = gpd.read_file(shapefile_path)
-# Filter for Europe
-europe = world[world['CONTINENT'] == 'Europe']
+try:
+    # Load the shapefile
+    world = gpd.read_file(shapefile_path)
+    # Filter for Europe
+    europe = world[world['CONTINENT'] == 'Europe']
+except Exception as e:
+    print(f"Error loading shapefile: {e}")
+    europe = None
 
 def country_to_region(country,europe):
     subregion = europe[europe["NAME_LONG"]==country]["SUBREGION"].item()

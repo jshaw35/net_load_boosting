@@ -8,6 +8,7 @@ figs_tryout/**
 !figs_tryout/.gitkeep
 figs_storyline_extremes/**
 !figs_storyline_extremes/.gitkeep
+outputs/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
