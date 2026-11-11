@@ -17,8 +17,6 @@ import preprocess as pc
 def load_c2e_heating_demand(c2e_path):
 
     c2e_years = np.arange(2015, 2025)
-    c2e_country_dict = {i : [] for i in highRES_country_codes}
-    c2e_country_electrified_dict = {i : [] for i in highRES_country_codes}
     year_list = []
     for year in c2e_years:
         c2e_heating = pd.read_csv(f"{c2e_path}/heating-demand_{year}.csv")
@@ -38,29 +36,11 @@ def load_c2e_heating_demand(c2e_path):
             country_ds = xr.combine_by_coords([c2e_combined_country_TWh_ds, c2e_combined_country_electrified_TWh_ds])[highRES_country_codes_inv[country_code]]
             country_ds.name = "demand_TWh"
             country_list.append(country_ds)
-            # country_list.append(xr.combine_by_coords([c2e_combined_country_TWh_ds, c2e_combined_country_electrified_TWh_ds]))
         year_list.append(xr.concat(country_list, dim="country"))
 
         out_ds = xr.combine_by_coords(year_list).rename({"index": "time"})
         out_ds["time"] = pd.to_datetime(out_ds["time"])
     return out_ds
-
-    c2e_weather_demand_df = pd.DataFrame.from_dict(c2e_country_dict, orient="index", columns=c2e_years).T
-    c2e_weather_demand_electrified_df = pd.DataFrame.from_dict(c2e_country_electrified_dict, orient="index", columns=c2e_years).T
-
-    return c2e_weather_demand_df, c2e_weather_demand_electrified_df
-
-    # c2e_years = np.arange(2015, 2025)
-    # c2e_weather_demand = {}
-    # for year in c2e_years:
-    #     c2e_heating = pd.read_csv(f"{c2e_path}/heating-demand_{year}.csv")
-    #     c2e_cooling = pd.read_csv(f"{c2e_path}/cooling-demand_{year}.csv")
-    #     c2e_combined = c2e_heating.set_index("country") + c2e_cooling.set_index("country")
-    #     c2e_combined_country_TWh = c2e_combined.loc[highRES_country_codes_inv[country_code]].sum()
-    #     c2e_weather_demand[year] = c2e_combined_country_TWh
-    # c2e_weather_demand_df = pd.DataFrame.from_dict(c2e_weather_demand, orient="index", columns=["C2E_heating_cooling_demand_TWh"])
-
-    # return c2e_weather_demand_df
 
 
 # %%
@@ -201,8 +181,6 @@ for country in shared_countries:
         zorder=10,
     )
     fig.suptitle(f"Hourly demand comparison for {country} (2015-2023) C2E {1e-6*c2e_total.groupby("time.year").sum().mean().values:.2f} TWh, Test dataset {1e-6*24*test_average_year.sum().values:.2f} TWh",y=0.92)
-    # ax.text(0.02, 0.94, f"Avg. annual demand: C2E {1e-6*c2e_total.groupby("time.year").sum().mean().values:.2f} TWh, Test dataset {1e-6*24*test_average_year.sum().values:.2f} TWh", ha="left", fontsize=10, transform=fig.transFigure)
-    # plt.legend()
     plt.show()
     # break
 
