@@ -207,3 +207,70 @@ for country in shared_countries:
     # break
 
 # %%
+c2e_current_dict = {
+    "heating_scenario": "current_electrified",
+    "capacity_scenario": "current",
+}
+c2e_future_dict = {
+    "heating_scenario": "fully_electrified",
+    "capacity_scenario": "future",
+}
+for country in shared_countries:
+    fig, ax = plt.subplots(figsize=(12, 6))
+    title = f"Hourly demand comparison for {country} (2015-2023)"
+
+    test_country = test_sel.sel(country=highRES_country_code_mapping[country])
+    test_average_year = test_country.groupby("time.dayofyear").mean(dim="time")
+    years = pd.Series(test_country["time.year"].values).unique()
+
+    title += f" Test dataset {1e-6*24*test_average_year.sum().values:.2f} TWh"
+
+    # Test dataset
+    for year in years:
+        year_data = test_country.sel(time=test_country["time.year"] == year)
+        ax.plot(
+            year_data["time.dayofyear"], year_data,
+            alpha=0.12,
+            c="orange",
+            zorder=0,
+        )
+    ax.plot(
+        test_average_year["dayofyear"], test_average_year,
+        c="orange",
+        zorder=10,
+        label=f"Test dataset"
+    )
+
+    for scenario, c2e_sel_dict, color in zip(["Current", "Future"], [c2e_current_dict, c2e_future_dict], ["blue", "green"]):
+
+        c2e_country = c2e_demand_sel.sel(country=country, **c2e_sel_dict).squeeze()*1e3
+        c2e_country_heating = c2e_heatingcooling_sel['demand_TWh'].sel(country=country, heating_scenario=c2e_sel_dict["heating_scenario"]).squeeze()*1e6
+        assert len(c2e_country["time"]) == len(c2e_country_heating["time"]), f"Time dimension mismatch for country {country}"
+        c2e_country_heating["time"] = c2e_country["time"]
+        c2e_total = c2e_country + c2e_country_heating
+        c2e_average_year = c2e_total.groupby("time.dayofyear").mean(dim="time")
+
+        title += f", C2E {scenario} {24*1e-6*c2e_average_year.sum().values:.2f} TWh"
+
+        # Plot combined C2E demand
+        for year in years:
+            year_data = c2e_total.sel(time=c2e_total["time.year"] == year)
+            ax.plot(
+                year_data["time.dayofyear"], year_data,
+                alpha=0.15,
+                c=color,
+            )
+        ax.plot(
+            c2e_average_year["dayofyear"], 
+            c2e_average_year,
+            c=color,
+            zorder=10,
+            label=f"C2E {scenario}",
+        )
+    fig.suptitle(title,y=0.92)
+
+    plt.legend()
+    plt.show()
+    # break
+
+# %%
