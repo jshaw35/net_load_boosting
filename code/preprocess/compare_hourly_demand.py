@@ -156,7 +156,7 @@ for country in shared_countries:
     ax.plot(
         c2e_average_year["dayofyear"], c2e_average_year,
         c="blue",
-        label=f"C2E ind. {year}",
+        # label=f"C2E ind. {year}",
     )
     # C2E heating demand
     for year in years:
@@ -200,8 +200,9 @@ for country in shared_countries:
         c="orange",
         zorder=10,
     )
-    fig.suptitle(f"Hourly demand comparison for {country} (2015-2023)",y=0.92)
-    plt.legend()
+    fig.suptitle(f"Hourly demand comparison for {country} (2015-2023) C2E {1e-6*c2e_total.groupby("time.year").sum().mean().values:.2f} TWh, Test dataset {1e-6*24*test_average_year.sum().values:.2f} TWh",y=0.92)
+    # ax.text(0.02, 0.94, f"Avg. annual demand: C2E {1e-6*c2e_total.groupby("time.year").sum().mean().values:.2f} TWh, Test dataset {1e-6*24*test_average_year.sum().values:.2f} TWh", ha="left", fontsize=10, transform=fig.transFigure)
+    # plt.legend()
     plt.show()
     # break
 
