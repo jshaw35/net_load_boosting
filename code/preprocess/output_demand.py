@@ -23,3 +23,17 @@ ds_demand.to_dataset(name="GWh").to_netcdf(
 )
 
 # %%
+
+scenario = "historical"
+members = ["A", "B", "C"]
+boost = None
+ds_demand = pc.open_weather_insensitive_demand(scenario, boost, members)
+
+# %%
+out_path = os.path.join(base_dir, "..", "..", "outputs")
+os.makedirs(out_path, exist_ok=True)
+ds_demand.to_dataset(name="GWh").to_netcdf(
+    os.path.join(out_path, f"weather-insensitive_demand_{scenario}.nc")
+)
+
+# %%
