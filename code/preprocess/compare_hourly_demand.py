@@ -86,7 +86,7 @@ c2e_demand = xr.open_dataarray(
     os.path.join(load_path, f"weather-insensitive_demand_{scenario}.nc")
 )
 
-c2e_path = "/Users/jonahshaw/Library/CloudStorage/OneDrive-UniversitetetiOslo/Projects/pathways_planning/C2E_data/only_csv"
+c2e_path = "/Users/jonahshaw/Library/CloudStorage/OneDrive-UniversitetetiOslo/Projects/pathways_planning/C2E_data/only_csv_SSP245"
 c2e_heatingcooling = load_c2e_heating_demand(c2e_path)
 
 # %%
