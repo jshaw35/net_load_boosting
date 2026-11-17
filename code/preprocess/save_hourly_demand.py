@@ -73,16 +73,18 @@ highRES_countries = list(highRES_country_codes_inv.values())
 # %%
 load_path = "/Users/jonahshaw/Library/CloudStorage/OneDrive-UniversitetetiOslo/Projects/pathways_planning/pathwaysplanning_highRES/demand/"
 scenario = "SSP245"
+start_year = 2015
+stop_year = 2050
 c2e_wi_demand = xr.open_dataarray(
     os.path.join(load_path, f"weather-insensitive_demand_{scenario}.nc"),
-).sel(time=slice("2025", "2050"), capacity_scenario=["current", "future"]).squeeze()
+).sel(time=slice(str(start_year), str(stop_year)), capacity_scenario=["current", "future"]).squeeze()
 c2e_wi_demand = c2e_wi_demand.assign_coords(
     time=c2e_wi_demand.indexes["time"].to_datetimeindex()
 )
 c2e_wi_demand.name = "weather_insensitive_demand_GWh"
 
-c2e_path = "/Users/jonahshaw/Library/CloudStorage/OneDrive-UniversitetetiOslo/Projects/pathways_planning/C2E_data/only_csv"
-c2e_heatingcooling_demand = load_c2e_heating_demand(c2e_path, years=np.arange(2025, 2051))
+c2e_path = "/Users/jonahshaw/Library/CloudStorage/OneDrive-UniversitetetiOslo/Projects/pathways_planning/C2E_data/only_csv_SSP245"
+c2e_heatingcooling_demand = load_c2e_heating_demand(c2e_path, years=np.arange(start_year, stop_year+1))
 
 # Select only the shared countries
 shared_countries = [str(i) for i in c2e_wi_demand.country.values if i in c2e_heatingcooling_demand.country.values]
